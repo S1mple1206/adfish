@@ -4,62 +4,75 @@ async function command(action, value) {
   const result = await window.browser.command(action, value);
   if (result?.error) {
     if (action === 'save') $('settings-error').textContent = result.error;
-    else $('address-error').textContent = result.error;
+    else showAddressError(result.error);
   }
   return result;
 }
 window.browser.onState(next => {
-  const themeChanged = state?.config.theme !== next.config.theme;
   state = next;
   document.documentElement.dataset.theme = next.config.theme;
-  if ($('ad-art').getAttribute('src') !== next.theme.image) $('ad-art').src = next.theme.image;
-  $('ad-art').alt = next.theme.alt;
-  $('ad-intro').textContent = next.theme.intro;
   $('menu-button').setAttribute('aria-expanded', String(next.menuOpen));
   $('back').disabled = !next.back;
   $('forward').disabled = !next.forward;
   $('reload').disabled = !next.url;
-  for (const key of ['title', 'headline', 'caption']) $(key).textContent = next.config[key];
-  $('headline').textContent = next.config.headline === next.theme.headline ? next.config.headline.replace('，', '，\n') : next.config.headline;
-  if (themeChanged && $('settings-dialog').open) {
-    for (const field of ['headline', 'caption', 'theme']) $('settings-form').elements[field].value = next.config[field];
-  }
-  $('home').hidden = !next.ad;
-  document.body.classList.toggle('cover', next.ad);
-  $('error-panel').hidden = !next.failure || next.ad;
+  document.title = next.config.title;
+  $('error-panel').hidden = !next.failure;
   $('error-detail').textContent = next.failure;
-  if (document.activeElement !== $('address')) $('address').value = next.url;
-  if (!next.addressOpen && $('address-dialog').open) $('address-dialog').close();
+  if (document.activeElement !== $('address')) {
+    $('address').value = next.url;
+    clearAddressError();
+  }
   if (!next.settings && $('settings-dialog').open) $('settings-dialog').close();
 });
-window.browser.onFocusAddress(() => {
+function clearAddressError() {
+  $('address').setCustomValidity('');
+  $('address').removeAttribute('aria-invalid');
+  $('address').title = '网址或搜索';
   $('address-error').textContent = '';
-  if (!$('address-dialog').open) $('address-dialog').showModal();
+}
+function showAddressError(message) {
+  $('address-error').textContent = message;
+  $('address').setCustomValidity(message);
+  $('address').setAttribute('aria-invalid', 'true');
+  $('address').title = message;
+}
+window.browser.onFocusAddress(async () => {
+  if ($('settings-dialog').open) await closeSettings();
+  clearAddressError();
   $('address').focus(); $('address').select();
 });
+$('address').oninput = clearAddressError;
+$('address').onfocus = () => command('address-focus', true);
+$('address').onblur = () => {
+  command('address-focus', false);
+  if (!$('address').hasAttribute('aria-invalid')) $('address').value = state?.url || '';
+};
+$('address').addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    clearAddressError(); $('address').value = state?.url || ''; $('address').blur();
+  }
+});
 document.addEventListener('keydown', event => {
-  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') { event.preventDefault(); command('toggle-ad'); }
-  else if (event.ctrlKey && event.key.toLowerCase() === 'l') { event.preventDefault(); command('focus-address'); }
+  if (event.ctrlKey && event.key.toLowerCase() === 'l') { event.preventDefault(); command('focus-address'); }
 });
 $('address-form').onsubmit = async event => {
   event.preventDefault();
+  clearAddressError();
   const result = await command('navigate', $('address').value);
-  if (result?.error) $('address-error').textContent = result.error;
+  if (result?.error) $('address').reportValidity();
+  else $('address').blur();
 };
-$('cancel-address').onclick = () => command('address', false);
-$('address-dialog').addEventListener('cancel', event => { event.preventDefault(); command('address', false); });
 for (const action of ['minimize', 'close']) $(action).onclick = () => command(action);
 $('menu-button').onclick = () => command('menu');
+$('go-home').onclick = () => command('home');
 for (const action of ['back', 'forward', 'reload']) $(action).onclick = () => command(action);
-$('brand-home').onclick = () => command('return-ad');
-$('explore').onclick = () => command('open-browser');
 $('retry').onclick = () => command('reload');
 async function openSettings() {
   if ($('settings-dialog').open) return;
   const form = $('settings-form');
-  for (const key of ['width', 'height', 'title', 'headline', 'caption', 'home', 'theme']) form.elements[key].value = state.config[key];
+  for (const key of ['width', 'height', 'title', 'home', 'theme']) form.elements[key].value = state.config[key];
   form.elements.autoScale.checked = state.config.autoScale;
-  form.elements.hoverBrowse.checked = state.config.hoverBrowse;
   form.elements.stealthMode.checked = state.config.stealthMode;
   $('settings-error').textContent = '';
   $('settings-save-status').textContent = '修改后自动保存';

@@ -1,34 +1,14 @@
 {
   "blue": {
-    "name": "科技蓝 · 耳机",
-    "image": "assets/ad-headphones.png",
-    "alt": "蓝色耳机商品广告",
-    "intro": "今日好物 · 音乐相伴",
-    "headline": "好声音，随时相伴。",
-    "caption": "把喜欢的旋律，带进日常。"
+    "name": "科技蓝"
   },
   "green": {
-    "name": "自然绿 · 护肤",
-    "image": "assets/ad-skincare.png",
-    "alt": "自然绿护肤用品广告",
-    "intro": "自然灵感 · 日常护理",
-    "headline": "自然呵护，清新日常。",
-    "caption": "为日常，留一点温柔。"
+    "name": "自然绿"
   },
   "red": {
-    "name": "活力红 · 运动",
-    "image": "assets/ad-sneakers.png",
-    "alt": "红色运动鞋商品广告",
-    "intro": "运动精选 · 活力日常",
-    "headline": "轻装上阵，即刻出发。",
-    "caption": "让每一步，都充满期待。"
+    "name": "活力红"
   },
   "amber": {
-    "name": "暖琥珀 · 咖啡",
-    "image": "assets/ad-coffee.png",
-    "alt": "暖色咖啡和可颂广告",
-    "intro": "咖啡时光 · 每日精选",
-    "headline": "慢一点，享受此刻。",
-    "caption": "一杯香气，一段好时光。"
+    "name": "暖琥珀"
   }
 }

@@ -22,15 +22,18 @@ try {
 }
 app.setPath('userData', dataDir);
 const configFile = path.join(app.getPath('userData'), 'settings.json');
-let config = { width: 360, height: 260, title: '今日精选', headline: themes.blue.headline, caption: themes.blue.caption, home: 'https://www.bing.com', top: false, autoScale: true, hoverBrowse: true, stealthMode: true, theme: 'blue', volume: 100, muted: false };
-try { config = { ...config, ...JSON.parse(fs.readFileSync(configFile, 'utf8')) }; } catch { /* First launch uses defaults. */ }
+let config = { width: 360, height: 260, title: 'adfish', home: 'https://www.bing.com', top: false, autoScale: true, stealthMode: true, theme: 'blue', volume: 100, muted: false };
+try {
+  const saved = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+  for (const key of Object.keys(config)) if (Object.hasOwn(saved, key)) config[key] = saved[key];
+} catch { /* First launch uses defaults. */ }
+if (config.title === '今日精选') config.title = 'adfish';
 if (!Object.hasOwn(themes, config.theme)) config.theme = 'blue';
 config.volume = Number.isFinite(config.volume) ? Math.max(0, Math.min(100, Math.round(config.volume))) : 100;
 config.muted = !!config.muted;
 config.stealthMode = !!config.stealthMode;
-if (config.headline === '好物，让生活更轻松。') config.headline = '好声音，随时相伴。';
-if (config.caption === '发现实用灵感，开启今日精选。') config.caption = '把喜欢的旋律，带进日常。';
-let win, view, menuWindow, ad = true, settings = false, failure = '', status = '就绪', saveTimer, hoverTimer, navigationStarted = false, manualAd = false, menuOpen = false, menuHovered = false, addressOpen = false, edgeResizeBounds, audioControl, audioError = '', stealthHidden = false, stealthBounds;
+let win, view, menuWindow, settings = false, failure = '', status = '就绪', saveTimer, cursorTimer, menuOpen = false, menuHovered = false, addressFocused = false, edgeResizeBounds, audioControl, audioError = '', stealthHidden = false, stealthBounds;
+let htmlFullscreen = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { if (win && !win.isDestroyed()) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
 const shellURL = pathToFileURL(path.join(__dirname, 'index.html')).href;
@@ -49,9 +52,9 @@ function layout() {
   const [width, height] = win.getContentSize();
   view.setBounds({ x: 2, y: 30, width: Math.max(1, width - 4), height: Math.max(1, height - 31) });
   // Keep a desktop-width layout; Chromium scales text, images and input coordinates together.
-  const zoom = config.autoScale ? Math.min(5, Math.max(0.25, (width - 4) / 1280)) : 1;
+  const zoom = !htmlFullscreen && config.autoScale ? Math.min(5, Math.max(0.25, (width - 4) / 1280)) : 1;
   if (Math.abs(view.webContents.getZoomFactor() - zoom) > 0.0001) view.webContents.setZoomFactor(zoom);
-  const visible = !ad && !settings && !addressOpen && !failure;
+  const visible = !settings && !failure;
   if (view.getVisible() !== visible) view.setVisible(visible);
   if (!visible && !menuOpen && win.isVisible()) win.webContents.focus();
 }
@@ -82,46 +85,28 @@ function syncStealthMode() {
   }
   return false;
 }
-function syncHoverMode() {
-  if (!config.hoverBrowse || settings || menuOpen || addressOpen || !win || win.isDestroyed()) return false;
-  const { x, y } = screen.getCursorScreenPoint();
-  const bounds = win.getContentBounds();
-  const insideWindow = win.isVisible() && !win.isMinimized() && x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height;
-  // The 29px header plus its 1px outer border is excluded, including the close button.
-  const insideContent = insideWindow && y >= bounds.y + 30;
-  if (!insideWindow) manualAd = false;
-  const nextAd = !insideContent || manualAd;
-  const changed = ad !== nextAd;
-  ad = nextAd;
-  return changed;
-}
 function publish() {
   if (!win || win.isDestroyed()) return;
-  syncHoverMode();
   const wc = view.webContents;
   layout();
-  const state = { config, theme: themes[config.theme], ad, settings, menuOpen, addressOpen, audioError, failure, status, zoom: wc.getZoomFactor(), url: wc.getURL(), back: wc.navigationHistory.canGoBack(), forward: wc.navigationHistory.canGoForward(), loading: wc.isLoading(), size: win.getContentSize() };
+  const state = { config, settings, menuOpen, addressFocused, audioError, failure, status, zoom: wc.getZoomFactor(), url: wc.getURL(), back: wc.navigationHistory.canGoBack(), forward: wc.navigationHistory.canGoForward(), loading: wc.isLoading(), size: win.getContentSize() };
   win.webContents.send('state', state);
   if (menuWindow && !menuWindow.isDestroyed()) menuWindow.webContents.send('state', state);
 }
 async function navigate(input) {
   const target = resolveAddress(input);
-  addressOpen = false;
-  navigationStarted = true;
-  manualAd = false;
-  ad = false; failure = ''; status = '正在加载…'; publish();
+  addressFocused = false;
+  failure = ''; status = '正在加载…'; publish();
   try { await view.webContents.loadURL(target); }
   catch (error) { if (error.code !== 'ERR_ABORTED') { failure = `网页未能打开：${error.code || '网络连接失败'}`; status = failure; publish(); } }
 }
-function returnToAd() { manualAd = true; ad = true; publish(); }
-function openBrowser() {
-  manualAd = false; ad = false;
-  if (!view.webContents.getURL() || failure) navigate(config.home);
-  else publish();
+function leaveVideoFullscreen() {
+  if (!htmlFullscreen || !win || win.isDestroyed()) return;
+  htmlFullscreen = false;
+  publish();
 }
-function toggleAd() { if (ad) openBrowser(); else returnToAd(); }
 function focusAddress() {
-  addressOpen = true;
+  addressFocused = true;
   closeWindowMenu();
   publish();
   win.webContents.focus();
@@ -139,7 +124,7 @@ app.whenReady().then(() => {
       if ((wParam.readUInt32LE(0) & 0xfff0) === 0xf000) edgeResizeBounds = win.getBounds();
     });
   }
-  view = new WebContentsView({ webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:browsing' } });
+  view = new WebContentsView({ webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:browsing', disableHtmlFullscreenWindowResize: true } });
   win.contentView.addChildView(view);
   function showWindowMenu() {
     if (menuOpen) { closeWindowMenu(); return; }
@@ -161,7 +146,7 @@ app.whenReady().then(() => {
       const point = screen.getCursorScreenPoint(), b = win.getContentBounds();
       const buttonWidth = b.width >= 481 ? 32 : 28;
       // Let clicking the parent menu button toggle it instead of closing then reopening.
-      if (point.x >= b.x + b.width - 2 * buttonWidth - 1 && point.x < b.x + b.width - buttonWidth - 1 && point.y >= b.y && point.y < b.y + 30) return;
+      if (point.x >= b.x + b.width - 2 * buttonWidth - 5 && point.x < b.x + b.width - buttonWidth - 5 && point.y >= b.y && point.y < b.y + 30) return;
       closeWindowMenu();
     });
     menuWindow.on('closed', () => { menuWindow = undefined; menuOpen = false; menuHovered = false; publish(); });
@@ -177,8 +162,16 @@ app.whenReady().then(() => {
   });
   audioControl.apply(config.volume, config.muted);
   wc.setZoomMode('isolated');
-  wc.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-  wc.session.setPermissionCheckHandler(() => false);
+  wc.session.setPermissionRequestHandler((requester, permission, callback) => callback(requester === wc && permission === 'fullscreen'));
+  wc.session.setPermissionCheckHandler((requester, permission) => requester === wc && permission === 'fullscreen');
+  wc.on('enter-html-full-screen', () => {
+    if (htmlFullscreen) return;
+    htmlFullscreen = true;
+    closeWindowMenu();
+    publish();
+    wc.focus();
+  });
+  wc.on('leave-html-full-screen', leaveVideoFullscreen);
   wc.session.on('will-download', (_event, item) => {
     const target = dialog.showSaveDialogSync(win, { title: '保存下载文件', defaultPath: item.getFilename() });
     if (!target) return item.cancel();
@@ -192,11 +185,15 @@ app.whenReady().then(() => {
   wc.on('did-start-loading', () => { failure = ''; status = '正在加载…'; publish(); });
   wc.on('did-stop-loading', () => { if (!failure) status = '就绪'; publish(); });
   wc.on('did-fail-load', (_e, code, description, _url, mainFrame) => { if (mainFrame && code !== -3) { failure = `网页未能打开：${description}`; status = failure; publish(); } });
-  wc.on('render-process-gone', () => { failure = '网页进程已停止，请刷新重试'; status = failure; publish(); });
+  wc.on('render-process-gone', () => { leaveVideoFullscreen(); failure = '网页进程已停止，请刷新重试'; status = failure; publish(); });
   for (const event of ['did-navigate', 'did-navigate-in-page', 'page-title-updated', 'did-finish-load']) wc.on(event, publish);
   function shortcut(event, input) {
     if (input.type !== 'keyDown') return;
-    if (input.control && input.shift && input.key.toLowerCase() === 'a') { event.preventDefault(); toggleAd(); }
+    if (htmlFullscreen && input.key === 'Escape' && !settings && !addressFocused && !menuOpen) {
+      event.preventDefault();
+      wc.executeJavaScript('document.exitFullscreen()').catch(leaveVideoFullscreen);
+      return;
+    }
     if (input.control && input.key.toLowerCase() === 'l') { event.preventDefault(); focusAddress(); }
     if (input.key === 'F5' || (input.control && input.key.toLowerCase() === 'r')) { event.preventDefault(); if (wc.getURL()) wc.reload(); }
     if (input.alt && input.key === 'ArrowLeft' && wc.navigationHistory.canGoBack()) { event.preventDefault(); wc.navigationHistory.goBack(); }
@@ -213,7 +210,7 @@ app.whenReady().then(() => {
       switch (action) {
         case 'ready': publish(); break;
         case 'focus-address': focusAddress(); break;
-        case 'address': addressOpen = !!value; break;
+        case 'address-focus': addressFocused = !!value; break;
         case 'close-menu': closeWindowMenu(); break;
         case 'menu-settings': settings = true; closeWindowMenu(); publish(); win.webContents.focus(); win.webContents.send('open-settings'); break;
         case 'audio': {
@@ -228,29 +225,20 @@ app.whenReady().then(() => {
         }
         case 'menu': showWindowMenu(); break;
         case 'navigate': await navigate(value); break;
-        case 'back': if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack(); ad = false; break;
-        case 'forward': if (wc.navigationHistory.canGoForward()) wc.navigationHistory.goForward(); ad = false; break;
+        case 'home': await navigate(config.home); break;
+        case 'back': if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack(); break;
+        case 'forward': if (wc.navigationHistory.canGoForward()) wc.navigationHistory.goForward(); break;
         case 'reload': if (wc.getURL()) { failure = ''; wc.reload(); } break;
-        case 'toggle-ad': toggleAd(); break;
-        case 'return-ad': returnToAd(); break;
-        case 'open-browser': openBrowser(); break;
         case 'settings': settings = !!value; break;
         case 'minimize': win.minimize(); break;
         case 'close': win.close(); return {};
         case 'save': {
-          if (value.theme !== undefined) {
-            if (!Object.hasOwn(themes, value.theme)) throw new Error('请选择有效的界面风格');
-            if (value.theme !== config.theme) {
-              for (const field of ['headline', 'caption']) {
-                if (value[field] === undefined && config[field] === themes[config.theme][field]) value[field] = themes[value.theme][field];
-              }
-            }
-          }
+          if (value.theme !== undefined && !Object.hasOwn(themes, value.theme)) throw new Error('请选择有效的界面风格');
           value = { ...config, ...value };
           const width = Number(value.width), height = Number(value.height);
           if (!Number.isInteger(width) || !Number.isInteger(height) || width < 300 || height < 220 || width > 3840 || height > 2160) throw new Error('窗口尺寸范围：宽 300–3840，高 220–2160');
           const home = resolveAddress(value.home);
-          config = { ...config, theme: value.theme, width: Math.min(width, area.width), height: Math.min(height, area.height), title: String(value.title).trim().slice(0, 30) || '今日精选', headline: String(value.headline).trim().slice(0, 60) || themes[value.theme].headline, caption: String(value.caption).trim().slice(0, 120), home, top: !!value.top, autoScale: value.autoScale === undefined ? config.autoScale : !!value.autoScale, hoverBrowse: value.hoverBrowse === undefined ? config.hoverBrowse : !!value.hoverBrowse, stealthMode: !!value.stealthMode };
+          config = { ...config, theme: value.theme, width: Math.min(width, area.width), height: Math.min(height, area.height), title: String(value.title).trim().slice(0, 30) || 'adfish', home, top: !!value.top, autoScale: value.autoScale === undefined ? config.autoScale : !!value.autoScale, stealthMode: !!value.stealthMode };
           const bounds = win.getBounds();
           const workArea = screen.getDisplayMatching(bounds).workArea;
           edgeResizeBounds = undefined;
@@ -282,8 +270,8 @@ app.whenReady().then(() => {
     [config.width, config.height] = win.getSize(); publish(); clearTimeout(saveTimer); saveTimer = setTimeout(save, 300);
   });
   win.on('close', () => { save(); closeWindowMenu(); });
-  win.on('closed', () => { clearInterval(hoverTimer); clearTimeout(saveTimer); audioControl.close(); if (!wc.isDestroyed()) wc.close(); });
-  hoverTimer = setInterval(() => {
+  win.on('closed', () => { clearInterval(cursorTimer); clearTimeout(saveTimer); audioControl.close(); if (!wc.isDestroyed()) wc.close(); });
+  cursorTimer = setInterval(() => {
     if (menuWindow && !menuWindow.isDestroyed() && menuWindow.isVisible()) {
       const point = screen.getCursorScreenPoint(), bounds = menuWindow.getContentBounds();
       const inside = point.x >= bounds.x && point.x < bounds.x + bounds.width && point.y >= bounds.y && point.y < bounds.y + bounds.height;
@@ -291,12 +279,10 @@ app.whenReady().then(() => {
       else if (menuHovered) closeWindowMenu();
     }
     if (syncStealthMode()) publish();
-    if (stealthHidden || !config.hoverBrowse || settings || menuOpen || addressOpen || win.isDestroyed()) return;
-    if (syncHoverMode()) publish();
-    if (!ad && !navigationStarted) navigate(config.home);
   }, 100);
   Menu.setApplicationMenu(null);
   win.loadFile('index.html');
+  navigate(config.home);
   win.once('ready-to-show', () => { win.show(); syncStealthMode(); publish(); });
 });
 app.on('window-all-closed', () => app.quit());

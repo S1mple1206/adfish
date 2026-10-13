@@ -4,29 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>今日精选</title>
+  <title>adfish</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <div class="brand"><button type="button" id="brand-home" class="brand-home" title="返回广告页" aria-label="返回广告页"><span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong id="title">今日精选</strong></button><span class="promotion">推广</span></div>
+    <button id="go-home" class="home-button" title="回到主页" aria-label="首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/></svg></button>
     <nav class="browser-nav" aria-label="网页导航">
       <button id="back" title="后退（Alt+←）" aria-label="后退" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
       <button id="forward" title="前进（Alt+→）" aria-label="前进" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg></button>
       <button id="reload" title="刷新（F5）" aria-label="刷新" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/></svg></button>
     </nav>
+    <form id="address-form" class="top-address-form"><input id="address" aria-label="网址或搜索" aria-describedby="address-error" placeholder="网址或搜索" autocomplete="off" spellcheck="false" required><span id="address-error" class="visually-hidden" role="alert"></span></form>
     <nav class="window-controls"><button id="menu-button" title="菜单" aria-label="菜单" aria-haspopup="menu" aria-expanded="false">⋯</button><button id="minimize" title="最小化" aria-label="最小化">−</button><button id="close" title="关闭" aria-label="关闭">×</button></nav>
   </header>
-  <main id="home">
-    <img id="ad-art" class="ad-art" src="assets/ad-headphones.png" alt="蓝色头戴式耳机商品广告">
-    <section class="hero"><p id="ad-intro" class="intro">今日好物 · 音乐相伴</p><h1 id="headline">好声音，随时相伴。</h1><p class="caption" id="caption">把喜欢的旋律，带进日常。</p><button id="explore" class="primary explore">探索精选 →</button></section>
-    <div class="categories"><div><strong>生活灵感</strong><span>让平凡的日子更有趣</span></div><div><strong>数字好物</strong><span>用科技提升生活品质</span></div><div><strong>每日发现</strong><span>发现更多值得拥有</span></div></div>
-  </main>
   <section id="error-panel" hidden><h2>暂时无法打开网页</h2><p id="error-detail"></p><button id="retry" class="primary">重新加载</button><p>请检查网络连接或输入其他网址。</p></section>
-  <dialog id="address-dialog" aria-labelledby="address-heading">
-    <div class="dialog-heading"><h2 id="address-heading">打开网址</h2><button type="button" id="cancel-address" aria-label="关闭网址输入">×</button></div>
-    <form id="address-form"><label class="address-label">网址或搜索<input id="address" aria-label="网址或搜索" placeholder="输入网址或搜索" autocomplete="off" spellcheck="false" required></label><p id="address-error" class="form-error" role="alert"></p><button type="submit" class="primary address-submit">打开</button></form>
-  </dialog>
   <dialog id="settings-dialog">
     <div class="dialog-heading"><h2>窗口设置</h2><button type="button" id="cancel-settings" aria-label="关闭设置">×</button></div>
     <form id="settings-form">
@@ -37,16 +29,12 @@
       <label>主页网址<input name="home" required placeholder="https://www.bing.com"></label>
       <label class="checkbox"><input name="autoScale" type="checkbox">网页随窗口等比例缩放</label>
       <p class="help">窗口缩小时，网页内容和文字会同步缩小。</p>
-      <label class="checkbox"><input name="hoverBrowse" type="checkbox">鼠标悬停时显示网页</label>
-      <p class="help">鼠标进入顶部栏下方显示网页，移到顶部栏或窗口外显示广告；设置打开时暂停切换。</p>
       <label class="checkbox"><input name="stealthMode" type="checkbox">隐身模式</label>
       <p class="help">移出窗口后隐藏整个窗口，回到原位置时恢复显示。默认开启；菜单范围也算在窗口内。</p>
-      <h3 class="settings-section-title">广告设置</h3>
-      <label>界面风格<select name="theme"><option value="blue">科技蓝 · 耳机</option><option value="green">自然绿 · 护肤</option><option value="red">活力红 · 运动</option><option value="amber">暖琥珀 · 咖啡</option></select></label>
+      <h3 class="settings-section-title">外观设置</h3>
+      <label>界面风格<select name="theme"><option value="blue">科技蓝</option><option value="green">自然绿</option><option value="red">活力红</option><option value="amber">暖琥珀</option></select></label>
       <label>窗口标题<input name="title" maxlength="30" required></label>
-      <label>广告主标题<input name="headline" maxlength="60" required></label>
-      <label>广告描述<input name="caption" maxlength="120"></label>
-      <p class="help">Ctrl+L 输入网址 · F5 刷新 · Ctrl+Shift+A 切换广告</p>
+      <p class="help">Ctrl+L 输入网址 · F5 刷新</p>
       <p id="settings-error" class="form-error" role="alert"></p>
     </form>
   </dialog>

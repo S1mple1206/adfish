@@ -1,7 +1,7 @@
 {
   "name": "adfish",
-  "version": "1.0.2",
-  "description": "摸鱼助手（adfish）：广告外观的小窗口浏览器，支持悬停切换与隐身模式",
+  "version": "1.0.3",
+  "description": "摸鱼助手（adfish）：支持隐身模式的小窗口浏览器",
   "main": "main.js",
   "private": true,
   "scripts": {
