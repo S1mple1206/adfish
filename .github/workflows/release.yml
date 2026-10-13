@@ -6,7 +6,12 @@ on:
       tag:
         description: Existing release tag
         required: true
-        default: v1.0.0
+        default: v1.0.1
+        type: string
+      build_ref:
+        description: Optional source commit for repackaging
+        required: false
+        default: main
         type: string
 
 permissions:
@@ -23,12 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.build_ref || inputs.tag }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Check release version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node -e "if ('v' + require('./package.json').version !== process.env.RELEASE_TAG) throw new Error('Source version does not match release tag')"
       - run: npm test
       - run: npm run dist:windows
       - run: npm run verify:windows
@@ -38,5 +47,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          gh release upload $env:RELEASE_TAG dist/adfish-Windows10-11-64bit.zip dist/adfish-Windows10-11-64bit.zip.sha256 --clobber
+          gh release upload $env:RELEASE_TAG dist/adfish-Windows-x64.zip dist/adfish-Windows-x64.zip.sha256 dist/adfish-Windows-arm64.zip dist/adfish-Windows-arm64.zip.sha256 --clobber
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

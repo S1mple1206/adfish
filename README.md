@@ -16,9 +16,9 @@
 
 ### 下载发布版
 
-1. 在仓库 **Releases** 下载 Windows 发布包并完整解压。
-2. 双击对应架构目录中的 **adfish.exe**；统一双架构包也可通过 **启动.cmd** 自动选择架构。
-3. 统一包可双击 **创建快捷方式.cmd**，创建名为 **adfish** 的桌面快捷方式。
+1. 在仓库 **Releases** 选择对应版本：Intel/AMD 电脑下载 **adfish-Windows-x64.zip**，Windows ARM 电脑下载 **adfish-Windows-arm64.zip**。
+2. 完整解压后双击 **adfish.exe**。
+3. 双击 **创建快捷方式.cmd**，创建名为 **adfish** 的桌面快捷方式。
 
 无需安装 Node.js 或 WebView2。请保留 EXE 旁的全部资源文件，不要只复制 EXE。创建快捷方式后移动程序目录，需要重新创建快捷方式。
 
