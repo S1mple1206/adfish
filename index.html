@@ -27,18 +27,20 @@
     <form id="settings-form">
       <p class="help">拖动顶部移动窗口；拖动边缘调整大小。</p>
       <p id="settings-save-status" class="help" role="status">修改后自动保存</p>
-      <label>界面风格<select name="theme"><option value="blue">科技蓝 · 耳机</option><option value="green">自然绿 · 护肤</option><option value="red">活力红 · 运动</option><option value="amber">暖琥珀 · 咖啡</option></select></label>
+      <h3 class="settings-section-title">系统设置</h3>
       <div class="dimensions"><label>宽度 / px<input name="width" type="number" min="300" max="3840" required></label><label>高度 / px<input name="height" type="number" min="220" max="2160" required></label></div>
-      <label>窗口标题<input name="title" maxlength="30" required></label>
-      <label>广告主标题<input name="headline" maxlength="60" required></label>
-      <label>广告描述<input name="caption" maxlength="120"></label>
       <label>主页网址<input name="home" required placeholder="https://www.bing.com"></label>
       <label class="checkbox"><input name="autoScale" type="checkbox">网页随窗口等比例缩放</label>
       <p class="help">窗口缩小时，网页内容和文字会同步缩小。</p>
       <label class="checkbox"><input name="hoverBrowse" type="checkbox">鼠标悬停时显示网页</label>
       <p class="help">鼠标进入顶部栏下方显示网页，移到顶部栏或窗口外显示广告；设置打开时暂停切换。</p>
       <label class="checkbox"><input name="stealthMode" type="checkbox">隐身模式</label>
-      <p class="help">移出窗口后隐藏整个窗口，回到原位置时恢复显示。默认关闭；菜单范围也算在窗口内。</p>
+      <p class="help">移出窗口后隐藏整个窗口，回到原位置时恢复显示。默认开启；菜单范围也算在窗口内。</p>
+      <h3 class="settings-section-title">广告设置</h3>
+      <label>界面风格<select name="theme"><option value="blue">科技蓝 · 耳机</option><option value="green">自然绿 · 护肤</option><option value="red">活力红 · 运动</option><option value="amber">暖琥珀 · 咖啡</option></select></label>
+      <label>窗口标题<input name="title" maxlength="30" required></label>
+      <label>广告主标题<input name="headline" maxlength="60" required></label>
+      <label>广告描述<input name="caption" maxlength="120"></label>
       <p class="help">Ctrl+L 输入网址 · F5 刷新 · Ctrl+Shift+A 切换广告</p>
       <p id="settings-error" class="form-error" role="alert"></p>
     </form>

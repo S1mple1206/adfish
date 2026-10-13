@@ -22,7 +22,7 @@ try {
 }
 app.setPath('userData', dataDir);
 const configFile = path.join(app.getPath('userData'), 'settings.json');
-let config = { width: 360, height: 260, title: '今日精选', headline: themes.blue.headline, caption: themes.blue.caption, home: 'https://www.bing.com', top: false, autoScale: true, hoverBrowse: true, stealthMode: false, theme: 'blue', volume: 100, muted: false };
+let config = { width: 360, height: 260, title: '今日精选', headline: themes.blue.headline, caption: themes.blue.caption, home: 'https://www.bing.com', top: false, autoScale: true, hoverBrowse: true, stealthMode: true, theme: 'blue', volume: 100, muted: false };
 try { config = { ...config, ...JSON.parse(fs.readFileSync(configFile, 'utf8')) }; } catch { /* First launch uses defaults. */ }
 if (!Object.hasOwn(themes, config.theme)) config.theme = 'blue';
 config.volume = Number.isFinite(config.volume) ? Math.max(0, Math.min(100, Math.round(config.volume))) : 100;

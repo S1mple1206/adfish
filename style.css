@@ -3,6 +3,7 @@
 
 #settings-dialog .dialog-heading{padding-bottom:8px;border-bottom:1px solid var(--line)}
 #settings-form{max-height:calc(92vh - 68px);overflow-y:auto;scrollbar-gutter:stable;padding-right:4px}
+.settings-section-title{font-size:12px;margin:12px 0 6px;color:var(--accent)}
 :root{--ink:#19385b;--surface:#f5f9ff;--frame:#809fc5;--soft-bg:#eaf2fc;--focus:#4b8bdd;--soft:#b9d8ff;--accent-hover:#1b4d90;--backdrop:#17355640}
 :root[data-theme="green"]{--accent:#286348;--ink:#234331;--surface:#f7faf4;--line:#d4e1d0;--muted:#6b7b65;--frame:#83a58b;--soft-bg:#eaf2e5;--focus:#59986a;--soft:#cee7c7;--accent-hover:#1c4c36;--backdrop:#233b2940}
 :root[data-theme="red"]{--accent:#b82d3b;--ink:#57212c;--surface:#fff6f4;--line:#edced0;--muted:#8d6970;--frame:#ca9096;--soft-bg:#fce8e8;--focus:#d55c67;--soft:#ffd4d4;--accent-hover:#962333;--backdrop:#49202a40}
