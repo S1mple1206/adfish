@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <defs><clipPath id="circle"><circle cx="90" cy="90" r="89"/></clipPath><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#c7ddf5"/><stop offset="1" stop-color="#edf5ff"/></linearGradient><linearGradient id="leaf"><stop stop-color="#477bb2"/><stop offset="1" stop-color="#91b8df"/></linearGradient><linearGradient id="pot"><stop stop-color="#dce7f3"/><stop offset="1" stop-color="#ffffff"/></linearGradient></defs>
+  <g clip-path="url(#circle)"><rect width="180" height="180" fill="url(#bg)"/><path d="M0 142h180v38H0" fill="#bad0e8"/><path d="M0 105 158 0h22L0 139" fill="#ffffff30"/><ellipse cx="103" cy="151" rx="68" ry="7" fill="#728aa5" opacity=".25"/>
+  <path d="m53 125 3-57m-3 49L30 96m26 13 19-41m-18 49 27-30" stroke="#618ab6" stroke-width="2.5" fill="none"/>
+  <path d="M55 83Q24 70 26 48q28-1 29 35ZM55 99Q28 110 16 87q19-15 39 12ZM59 88Q57 54 89 49q0 28-30 39ZM64 113Q68 83 103 81q-7 30-39 32Z" fill="url(#leaf)"/>
+  <path d="m29 52 25 31m-31 8 31 8m4-14 26-30m-18 55 28-22" stroke="#3c70a6" stroke-width=".8" fill="none" opacity=".5"/>
+  <path d="m37 121 6 35h31l5-35" fill="url(#pot)"/><ellipse cx="58" cy="121" rx="21" ry="3" fill="#f7fbff"/><ellipse cx="58" cy="122" rx="17" ry="1.5" fill="#849bb6"/>
+  <path d="M132 132q25-6 23 12t-25 6" stroke="#648dbb" stroke-width="6" fill="none"/><path d="M110 128h25v25q0 8-12 8t-13-8Z" fill="#78a1ce"/><ellipse cx="123" cy="128" rx="13" ry="3" fill="#466e9b"/>
+  </g>
+</svg>

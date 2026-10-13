@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>菜单</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="menu.css">
+</head>
+<body class="menu-page">
+  <div class="dropdown-content" aria-label="浏览菜单">
+    <button id="open-address" class="menu-item">打开网址…<span>Ctrl+L</span></button>
+    <button id="back" class="menu-item" disabled>后退<span>Alt+←</span></button>
+    <button id="forward" class="menu-item" disabled>前进<span>Alt+→</span></button>
+    <button id="reload" class="menu-item" disabled>刷新<span>F5</span></button>
+    <div class="menu-divider"></div>
+    <div class="volume-row"><label for="volume-level">音量</label><output id="volume-value" for="volume-level">100%</output></div>
+    <input id="volume-level" type="range" min="0" max="100" step="1" aria-label="网页音量">
+    <label class="menu-checkbox"><input id="volume-muted" type="checkbox">静音</label>
+    <div class="menu-divider"></div>
+    <label class="menu-checkbox"><input id="top-toggle" type="checkbox">窗口置顶</label>
+    <button id="settings" class="menu-item">设置</button>
+    <p id="menu-error" role="alert" hidden></p>
+  </div>
+  <script src="menu.js"></script>
+</body>
+</html>
