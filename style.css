@@ -16,6 +16,16 @@ input[type="checkbox"]{accent-color:var(--accent)}
 .window-controls{flex-shrink:0}
 .brand-home{display:flex;align-items:center;gap:9px;min-width:0;height:29px;padding:0;color:inherit;border-radius:0;-webkit-app-region:no-drag}
 .brand-home:hover{background:#ffffff14;filter:none}
+header{position:relative}
+.brand{max-width:calc(50% - 52px);gap:5px}
+.brand-home{gap:6px;flex:1}
+.brand strong{min-width:0}
+.brand .logo,.brand .promotion{flex-shrink:0}
+.browser-nav{position:absolute;left:50%;transform:translateX(-50%);top:0;height:29px;display:flex;gap:2px;-webkit-app-region:no-drag}
+.browser-nav button{display:flex;align-items:center;justify-content:center;width:28px;height:100%;padding:0;border-radius:0;color:inherit}
+.browser-nav button:hover{background:#ffffff20;filter:none}
+.browser-nav button:disabled:hover{background:transparent}
+.browser-nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 main{top:30px;bottom:1px}
 #error-panel{inset:30px 2px 1px}
 #menu-button{font-size:22px;line-height:1}

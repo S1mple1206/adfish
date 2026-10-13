@@ -16,6 +16,9 @@ window.browser.onState(next => {
   $('ad-art').alt = next.theme.alt;
   $('ad-intro').textContent = next.theme.intro;
   $('menu-button').setAttribute('aria-expanded', String(next.menuOpen));
+  $('back').disabled = !next.back;
+  $('forward').disabled = !next.forward;
+  $('reload').disabled = !next.url;
   for (const key of ['title', 'headline', 'caption']) $(key).textContent = next.config[key];
   $('headline').textContent = next.config.headline === next.theme.headline ? next.config.headline.replace('，', '，\n') : next.config.headline;
   if (themeChanged && $('settings-dialog').open) {
@@ -47,6 +50,7 @@ $('cancel-address').onclick = () => command('address', false);
 $('address-dialog').addEventListener('cancel', event => { event.preventDefault(); command('address', false); });
 for (const action of ['minimize', 'close']) $(action).onclick = () => command(action);
 $('menu-button').onclick = () => command('menu');
+for (const action of ['back', 'forward', 'reload']) $(action).onclick = () => command(action);
 $('brand-home').onclick = () => command('return-ad');
 $('explore').onclick = () => command('open-browser');
 $('retry').onclick = () => command('reload');

@@ -8,9 +8,6 @@ async function command(action, value, close = false) {
 }
 window.browser.onState(state => {
   document.documentElement.dataset.theme = state.config.theme;
-  $('back').disabled = !state.back;
-  $('forward').disabled = !state.forward;
-  $('reload').disabled = !state.url;
   if (document.activeElement !== $('volume-level')) $('volume-level').value = state.config.volume;
   $('volume-value').textContent = `${state.config.volume}%`;
   $('volume-muted').checked = state.config.muted;
@@ -19,7 +16,6 @@ window.browser.onState(state => {
   $('menu-error').hidden = !state.audioError;
 });
 $('open-address').onclick = () => command('focus-address');
-for (const action of ['back', 'forward', 'reload']) $(action).onclick = () => command(action, undefined, true);
 $('settings').onclick = () => command('menu-settings');
 $('volume-level').oninput = () => command('audio', { volume: Number($('volume-level').value), muted: false });
 $('volume-muted').onchange = () => command('audio', { muted: $('volume-muted').checked });

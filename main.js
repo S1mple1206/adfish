@@ -145,7 +145,7 @@ app.whenReady().then(() => {
     if (menuOpen) { closeWindowMenu(); return; }
     const bounds = win.getBounds();
     const work = screen.getDisplayMatching(bounds).workArea;
-    const width = Math.min(220, work.width), height = Math.min(286, work.height);
+    const width = Math.min(220, work.width), height = Math.min(205, work.height);
     menuWindow = new BrowserWindow({ parent: win, width, height,
       x: Math.max(work.x, Math.min(bounds.x + bounds.width - width, work.x + work.width - width)),
       y: Math.max(work.y, Math.min(bounds.y + 30, work.y + work.height - height)),
