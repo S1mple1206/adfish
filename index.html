@@ -31,6 +31,12 @@
       <p class="help">窗口缩小时，网页内容和文字会同步缩小。</p>
       <label class="checkbox"><input name="stealthMode" type="checkbox">隐身模式</label>
       <p class="help">移出窗口后隐藏整个窗口，回到原位置时恢复显示。默认开启；菜单范围也算在窗口内。</p>
+      <label class="checkbox"><input name="pauseOnLeave" type="checkbox">离开时暂停网页</label>
+      <p class="help">移出窗口时暂停正在播放的视频和音频，回来后继续播放。默认关闭；顶部栏和菜单也算在窗口内。</p>
+      <label class="checkbox"><input name="quickClose" type="checkbox">快速关闭</label>
+      <label>快速关闭按键<input name="quickCloseKey" id="quick-close-key" readonly aria-label="快速关闭按键" title="点击后按下一个按键进行录入"></label>
+      <p class="help">双击 Alt 切换手动隐身，隐藏后须再次双击才显示。默认双击 Ctrl 退出软件；点击按键框可录入其他单个按键。请在 450 毫秒内连按两次，隐身和最小化时也有效。录入时暂停上述快捷键。</p>
+      <p id="quick-close-error" class="form-error" role="alert"></p>
       <h3 class="settings-section-title">外观设置</h3>
       <label>界面风格<select name="theme"><option value="blue">科技蓝</option><option value="green">自然绿</option><option value="red">活力红</option><option value="amber">暖琥珀</option></select></label>
       <label>窗口标题<input name="title" maxlength="30" required></label>

@@ -5,6 +5,8 @@ const { pathToFileURL } = require('node:url');
 const { resolveAddress } = require('./url');
 const themes = require('./themes.json');
 const createAudioControl = require('./audio-control');
+const mediaPauseScript = require('./media-pause');
+const { keys: quickCloseKeys, createQuickClose } = require('./quick-close');
 app.setName('adfish');
 if (process.platform === 'win32') app.setAppUserModelId('adfish');
 
@@ -22,7 +24,7 @@ try {
 }
 app.setPath('userData', dataDir);
 const configFile = path.join(app.getPath('userData'), 'settings.json');
-let config = { width: 360, height: 260, title: 'adfish', home: 'https://www.bing.com', top: false, autoScale: true, stealthMode: true, theme: 'blue', volume: 100, muted: false };
+let config = { width: 360, height: 260, title: 'adfish', home: 'https://www.bing.com', top: false, autoScale: true, stealthMode: true, pauseOnLeave: false, quickClose: true, quickCloseKey: 'Control', theme: 'blue', volume: 100, muted: false };
 try {
   const saved = JSON.parse(fs.readFileSync(configFile, 'utf8'));
   for (const key of Object.keys(config)) if (Object.hasOwn(saved, key)) config[key] = saved[key];
@@ -32,10 +34,17 @@ if (!Object.hasOwn(themes, config.theme)) config.theme = 'blue';
 config.volume = Number.isFinite(config.volume) ? Math.max(0, Math.min(100, Math.round(config.volume))) : 100;
 config.muted = !!config.muted;
 config.stealthMode = !!config.stealthMode;
-let win, view, menuWindow, settings = false, failure = '', status = '就绪', saveTimer, cursorTimer, menuOpen = false, menuHovered = false, addressFocused = false, edgeResizeBounds, audioControl, audioError = '', stealthHidden = false, stealthBounds;
+config.pauseOnLeave = !!config.pauseOnLeave;
+config.quickClose = !!config.quickClose;
+if (!Object.hasOwn(quickCloseKeys, config.quickCloseKey) || config.quickCloseKey === 'Alt') config.quickCloseKey = 'Control';
+let quickCloseControl, quickCloseError = '', quickClosing = false;
+let win, view, menuWindow, settings = false, failure = '', status = '就绪', saveTimer, cursorTimer, menuOpen = false, menuHovered = false, addressFocused = false, edgeResizeBounds, audioControl, audioError = '', stealthHidden = false, movingWindow = false;
 let htmlFullscreen = false;
+let mediaAway = false;
+let manualHidden = false;
+let manualReveal = false;
 if (!app.requestSingleInstanceLock()) app.quit();
-app.on('second-instance', () => { if (win && !win.isDestroyed()) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
+app.on('second-instance', () => { if (win && !win.isDestroyed() && !manualHidden) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
 const shellURL = pathToFileURL(path.join(__dirname, 'index.html')).href;
 const menuURL = pathToFileURL(path.join(__dirname, 'menu.html')).href;
 function closeWindowMenu() { if (menuWindow && !menuWindow.isDestroyed()) menuWindow.close(); }
@@ -58,28 +67,46 @@ function layout() {
   if (view.getVisible() !== visible) view.setVisible(visible);
   if (!visible && !menuOpen && win.isVisible()) win.webContents.focus();
 }
+function cursorInsideWindow() {
+  const point = screen.getCursorScreenPoint();
+  // Hidden windows can still move (e.g. a native drag finishes after hiding).
+  // The wake region must always follow the actual native window bounds.
+  const bounds = win.getBounds();
+  const inside = point.x >= bounds.x - 8 && point.x < bounds.x + bounds.width + 8 && point.y >= bounds.y - 8 && point.y < bounds.y + bounds.height + 8;
+  const menuBounds = menuWindow && !menuWindow.isDestroyed() && menuWindow.isVisible() ? menuWindow.getBounds() : undefined;
+  return inside || !!(menuBounds && point.x >= menuBounds.x && point.x < menuBounds.x + menuBounds.width && point.y >= menuBounds.y && point.y < menuBounds.y + menuBounds.height);
+}
+function syncMediaPause() {
+  if (!win || win.isDestroyed() || !view || view.webContents.isDestroyed()) return;
+  const away = config.pauseOnLeave && (manualHidden || (!movingWindow && (win.isMinimized() || !cursorInsideWindow())));
+  if (mediaAway === away) return;
+  mediaAway = away;
+  for (const frame of view.webContents.mainFrame.framesInSubtree) {
+    frame.executeJavaScript(mediaPauseScript(away)).catch(() => {});
+  }
+}
 function syncStealthMode() {
+  if (manualHidden) return false;
+  if (manualReveal) {
+    if (!cursorInsideWindow()) return false;
+    manualReveal = false;
+  }
   if (!win || win.isDestroyed() || win.isMinimized()) return false;
   if (!config.stealthMode) {
     if (!stealthHidden) return false;
     stealthHidden = false;
-    win.showInactive(); win.moveTop();
+    win.showInactive(); win.setAlwaysOnTop(!!config.top); win.moveTop();
     return true;
   }
-  const point = screen.getCursorScreenPoint();
-  const bounds = stealthHidden ? stealthBounds : win.getBounds();
   // Include the native resize edge so ordinary border dragging stays usable.
-  const inside = point.x >= bounds.x - 8 && point.x < bounds.x + bounds.width + 8 && point.y >= bounds.y - 8 && point.y < bounds.y + bounds.height + 8;
-  const menuBounds = menuWindow && !menuWindow.isDestroyed() && menuWindow.isVisible() ? menuWindow.getBounds() : undefined;
-  const insideMenu = menuBounds && point.x >= menuBounds.x && point.x < menuBounds.x + menuBounds.width && point.y >= menuBounds.y && point.y < menuBounds.y + menuBounds.height;
-  if (inside || insideMenu) {
+  if (cursorInsideWindow()) {
     if (!stealthHidden) return false;
     stealthHidden = false;
-    win.showInactive(); win.moveTop();
+    win.showInactive(); win.setAlwaysOnTop(!!config.top); win.moveTop();
     return true;
   }
-  if (win.isVisible()) {
-    stealthBounds = win.getBounds(); stealthHidden = true;
+  if (win.isVisible() && !movingWindow) {
+    stealthHidden = true;
     closeWindowMenu(); win.hide();
     return true;
   }
@@ -89,7 +116,7 @@ function publish() {
   if (!win || win.isDestroyed()) return;
   const wc = view.webContents;
   layout();
-  const state = { config, settings, menuOpen, addressFocused, audioError, failure, status, zoom: wc.getZoomFactor(), url: wc.getURL(), back: wc.navigationHistory.canGoBack(), forward: wc.navigationHistory.canGoForward(), loading: wc.isLoading(), size: win.getContentSize() };
+  const state = { config, settings, menuOpen, addressFocused, audioError, quickCloseError, quickCloseReady: !!quickCloseControl?.ready, failure, status, zoom: wc.getZoomFactor(), url: wc.getURL(), back: wc.navigationHistory.canGoBack(), forward: wc.navigationHistory.canGoForward(), loading: wc.isLoading(), size: win.getContentSize() };
   win.webContents.send('state', state);
   if (menuWindow && !menuWindow.isDestroyed()) menuWindow.webContents.send('state', state);
 }
@@ -119,6 +146,9 @@ app.whenReady().then(() => {
   config.height = Math.min(area.height, Math.max(220, Number(config.height) || 260));
   win = new BrowserWindow({ x: area.x + area.width - config.width - 16, y: area.y + area.height - config.height - 16, width: config.width, height: config.height, minWidth: 300, minHeight: 220, frame: false, resizable: true, maximizable: false, fullscreenable: false, backgroundColor: '#f5f9ff', title: config.title, icon: path.join(__dirname, 'assets', 'adfish.ico'), alwaysOnTop: !!config.top, show: false, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   if (process.platform === 'win32') {
+    // Do not hide or pause while Windows is running a native move/resize loop.
+    win.hookWindowMessage(0x0231, () => { movingWindow = true; });
+    win.hookWindowMessage(0x0232, () => { movingWindow = false; });
     // Windows border stretching uses SC_SIZE even with maximizable disabled.
     win.hookWindowMessage(0x0112, wParam => {
       if ((wParam.readUInt32LE(0) & 0xfff0) === 0xf000) edgeResizeBounds = win.getBounds();
@@ -154,13 +184,40 @@ app.whenReady().then(() => {
     menuWindow.once('ready-to-show', () => { if (menuWindow && !menuWindow.isDestroyed()) { publish(); menuWindow.show(); } });
   }
   win.on('system-context-menu', event => { event.preventDefault(); showWindowMenu(); });
+  win.on('show', () => { if (manualHidden) { win.hide(); return; } stealthHidden = false; });
+  win.on('moved', () => { movingWindow = false; });
+  win.on('resized', () => { movingWindow = false; });
   win.webContents.on('context-menu', showWindowMenu);
   const wc = view.webContents;
+  wc.on('did-frame-finish-load', (_event, _main, processId, routingId) => {
+    if (!mediaAway) return;
+    const { webFrameMain } = require('electron');
+    const frame = webFrameMain.fromId(processId, routingId);
+    if (frame && !frame.detached) frame.executeJavaScript(mediaPauseScript(true)).catch(() => {});
+  });
   wc.setAudioMuted(config.muted || config.volume === 0);
   audioControl = createAudioControl(app, error => {
     if (audioError !== error) { audioError = error; publish(); }
   });
   audioControl.apply(config.volume, config.muted);
+  quickCloseControl = createQuickClose(app, () => {
+    if (quickClosing || win.isDestroyed()) return;
+    quickClosing = true;
+    win.webContents.send('quick-close');
+    setTimeout(() => { if (!win.isDestroyed()) win.close(); }, 500).unref();
+  }, () => {
+    manualHidden = !manualHidden;
+    manualReveal = !manualHidden;
+    closeWindowMenu();
+    if (manualHidden) win.hide();
+    else {
+      if (win.isMinimized()) win.restore();
+      stealthHidden = false; win.show(); win.setAlwaysOnTop(!!config.top); win.moveTop();
+      if (!settings && !failure) wc.focus();
+    }
+    syncMediaPause(); publish();
+  }, error => { quickCloseError = error; publish(); });
+  quickCloseControl.apply(config.quickClose, config.quickCloseKey);
   wc.setZoomMode('isolated');
   wc.session.setPermissionRequestHandler((requester, permission, callback) => callback(requester === wc && permission === 'fullscreen'));
   wc.session.setPermissionCheckHandler((requester, permission) => requester === wc && permission === 'fullscreen');
@@ -211,6 +268,7 @@ app.whenReady().then(() => {
         case 'ready': publish(); break;
         case 'focus-address': focusAddress(); break;
         case 'address-focus': addressFocused = !!value; break;
+        case 'quick-close-capture': if (!fromMain) throw new Error('无效调用'); quickCloseControl.capture(!!value); break;
         case 'close-menu': closeWindowMenu(); break;
         case 'menu-settings': settings = true; closeWindowMenu(); publish(); win.webContents.focus(); win.webContents.send('open-settings'); break;
         case 'audio': {
@@ -235,11 +293,15 @@ app.whenReady().then(() => {
         case 'save': {
           if (value.theme !== undefined && !Object.hasOwn(themes, value.theme)) throw new Error('请选择有效的界面风格');
           value = { ...config, ...value };
+          if (!Object.hasOwn(quickCloseKeys, value.quickCloseKey) || value.quickCloseKey === 'Alt') throw new Error('Alt 已用于手动隐身，请选择其他快速关闭按键');
           const width = Number(value.width), height = Number(value.height);
           if (!Number.isInteger(width) || !Number.isInteger(height) || width < 300 || height < 220 || width > 3840 || height > 2160) throw new Error('窗口尺寸范围：宽 300–3840，高 220–2160');
           const home = resolveAddress(value.home);
-          config = { ...config, theme: value.theme, width: Math.min(width, area.width), height: Math.min(height, area.height), title: String(value.title).trim().slice(0, 30) || 'adfish', home, top: !!value.top, autoScale: value.autoScale === undefined ? config.autoScale : !!value.autoScale, stealthMode: !!value.stealthMode };
+          config = { ...config, theme: value.theme, width: Math.min(width, area.width), height: Math.min(height, area.height), title: String(value.title).trim().slice(0, 30) || 'adfish', home, top: !!value.top, autoScale: value.autoScale === undefined ? config.autoScale : !!value.autoScale, stealthMode: !!value.stealthMode, pauseOnLeave: !!value.pauseOnLeave };
           const bounds = win.getBounds();
+          config.quickClose = !!value.quickClose;
+          config.quickCloseKey = value.quickCloseKey;
+          quickCloseControl.apply(config.quickClose, config.quickCloseKey);
           const workArea = screen.getDisplayMatching(bounds).workArea;
           edgeResizeBounds = undefined;
           win.setBounds({ width: config.width, height: config.height, x: Math.max(workArea.x, Math.min(bounds.x, workArea.x + workArea.width - config.width)), y: Math.max(workArea.y, Math.min(bounds.y, workArea.y + workArea.height - config.height)) });
@@ -247,6 +309,7 @@ app.whenReady().then(() => {
           if (menuWindow && !menuWindow.isDestroyed()) menuWindow.setAlwaysOnTop(config.top);
           status = '设置已保存';
           if (!save()) throw new Error(status);
+          syncMediaPause();
           break;
         }
         default: throw new Error('未知操作');
@@ -270,7 +333,7 @@ app.whenReady().then(() => {
     [config.width, config.height] = win.getSize(); publish(); clearTimeout(saveTimer); saveTimer = setTimeout(save, 300);
   });
   win.on('close', () => { save(); closeWindowMenu(); });
-  win.on('closed', () => { clearInterval(cursorTimer); clearTimeout(saveTimer); audioControl.close(); if (!wc.isDestroyed()) wc.close(); });
+  win.on('closed', () => { clearInterval(cursorTimer); clearTimeout(saveTimer); audioControl.close(); quickCloseControl.close(); if (!wc.isDestroyed()) wc.close(); });
   cursorTimer = setInterval(() => {
     if (menuWindow && !menuWindow.isDestroyed() && menuWindow.isVisible()) {
       const point = screen.getCursorScreenPoint(), bounds = menuWindow.getContentBounds();
@@ -279,6 +342,7 @@ app.whenReady().then(() => {
       else if (menuHovered) closeWindowMenu();
     }
     if (syncStealthMode()) publish();
+    syncMediaPause();
   }, 100);
   Menu.setApplicationMenu(null);
   win.loadFile('index.html');

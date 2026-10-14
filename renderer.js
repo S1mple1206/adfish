@@ -18,6 +18,7 @@ window.browser.onState(next => {
   document.title = next.config.title;
   $('error-panel').hidden = !next.failure;
   $('error-detail').textContent = next.failure;
+  $('quick-close-error').textContent = next.quickCloseError || '';
   if (document.activeElement !== $('address')) {
     $('address').value = next.url;
     clearAddressError();
@@ -74,11 +75,28 @@ async function openSettings() {
   for (const key of ['width', 'height', 'title', 'home', 'theme']) form.elements[key].value = state.config[key];
   form.elements.autoScale.checked = state.config.autoScale;
   form.elements.stealthMode.checked = state.config.stealthMode;
+  form.elements.pauseOnLeave.checked = state.config.pauseOnLeave;
+  form.elements.quickClose.checked = state.config.quickClose;
+  form.elements.quickCloseKey.value = state.config.quickCloseKey;
   $('settings-error').textContent = '';
   $('settings-save-status').textContent = '修改后自动保存';
   await command('settings', true); $('settings-dialog').showModal();
 }
 window.browser.onOpenSettings(openSettings);
+window.browser.onQuickClose(async () => { await saveSetting(); await command('close'); });
+const quickCloseKey = $('quick-close-key');
+quickCloseKey.onfocus = () => command('quick-close-capture', true);
+quickCloseKey.onblur = () => command('quick-close-capture', false);
+quickCloseKey.onkeydown = event => {
+  event.preventDefault(); event.stopPropagation();
+  if (event.repeat) return;
+  const key = event.code === 'Space' ? 'Space' : event.key.length === 1 ? event.key.toUpperCase() : event.key;
+  if (!/^(Alt|Control|Shift|Meta|Escape|Space|Enter|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Arrow(Left|Right|Up|Down)|[A-Z0-9]|F([1-9]|1[0-9]|2[0-4]))$/.test(key)) return;
+  if (key === 'Alt') { $('settings-error').textContent = 'Alt 已用于手动隐身，请选择其他快速关闭按键'; return; }
+  quickCloseKey.value = key;
+  quickCloseKey.dispatchEvent(new Event('input', { bubbles: true }));
+  quickCloseKey.dispatchEvent(new Event('change', { bubbles: true }));
+};
 async function saveSetting() {
   clearTimeout(settingsSaveTimer);
   const input = pendingSetting;
@@ -96,6 +114,7 @@ async function saveSetting() {
 }
 async function closeSettings() {
   await saveSetting();
+  await command('quick-close-capture', false);
   await command('settings', false);
 }
 $('cancel-settings').onclick = closeSettings;

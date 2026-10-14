@@ -1,6 +1,6 @@
 {
   "name": "adfish",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "摸鱼助手（adfish）：支持隐身模式的小窗口浏览器",
   "main": "main.js",
   "private": true,
